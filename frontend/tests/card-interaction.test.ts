@@ -340,9 +340,10 @@ describe('卡片手势无障碍、选区精准化与外链安全加固', () => {
       expect(css).toContain('user-select: none;');
     });
 
-    test('标签预览只显示四行并省略，不创建滚动容器；详情默认完整展开', () => {
+    test('标签预览最多四行高并以渐隐遮罩提示更多，不创建滚动容器；详情默认完整展开', () => {
       const preview = css.match(/\.post-tags\[data-preview="true"\]\s*\{([^}]*)\}/)?.[1];
-      expect(preview).toContain('-webkit-line-clamp: 4;');
+      expect(preview).not.toContain('line-clamp');
+      expect(css).toMatch(/\.post-tags\[data-preview="true"\]\[data-overflow\]\s*\{[^}]*mask-image:/);
       expect(preview).toContain('overflow: clip;');
       expect(preview).toContain('max-height: 96px;');
       const full = css.match(/\.post-tags\s*\{([^}]*)\}/)?.[1];
@@ -352,8 +353,8 @@ describe('卡片手势无障碍、选区精准化与外链安全加固', () => {
     test('图标按钮固定 44px 热区并保留已有按压与收藏反馈', () => {
       expect(css).toMatch(/\.post-actions button\s*\{[^}]*width:\s*44px;[^}]*height:\s*44px;/);
       expect(css).toMatch(/\.post-actions\s*\{[^}]*justify-content:\s*flex-end;/);
-      // 非对称 70ms 按下，180ms 释放
-      expect(css).toContain('180ms');
+      // 非对称 70ms 按下，--dur-2 释放
+      expect(css).toContain('--dur-2: 200ms');
       expect(css).toContain('70ms');
       // bookmark-pop 动画与 scale(1.26)
       expect(css).toContain('@keyframes bookmark-pop');

@@ -245,3 +245,67 @@ describe('收藏状态与竞态锁', () => {
     }
   });
 });
+
+import { insertGroup, removeGroup } from '../src/Bookmarks';
+
+describe('收藏列表乐观更新辅助函数', () => {
+  const a = mockPost('danbooru-1');
+  const b = mockPost('danbooru-2');
+  const childOfB = { ...mockPost('danbooru-3'), parentId: 'danbooru-2' };
+  const c = mockPost('danbooru-4');
+
+  test('removeGroup 移除整组并返回原位置，insertGroup 可按原位置撤销', () => {
+    const list = [a, b, childOfB, c];
+    const result = removeGroup(list, 'danbooru-2', [b, childOfB]);
+    expect(result.posts.map(p => p.id)).toEqual(['danbooru-1', 'danbooru-4']);
+    expect(result.removed.map(p => p.id)).toEqual(['danbooru-2', 'danbooru-3']);
+    expect(result.index).toBe(1);
+    expect(insertGroup(result.posts, result.removed, result.index).map(p => p.id)).toEqual(list.map(p => p.id));
+  });
+
+  test('insertGroup 默认插到最前，且不重复已有项，下标越界时收敛', () => {
+    expect(insertGroup([a], [a, b]).map(p => p.id)).toEqual(['danbooru-2', 'danbooru-1']);
+    expect(insertGroup([a], [b], 99).map(p => p.id)).toEqual(['danbooru-1', 'danbooru-2']);
+  });
+});
+
+describe('收藏乐观更新', () => {
+  async function mount(posts: Post[]) {
+    const env = setupMockDOM();
+    env.fakeStorage.setItem('boorux:post-cache:v1', JSON.stringify({ 'favorites:default': { savedAt: Date.now(), data: { success: true, posts } } }));
+    let state: ReturnType<typeof useBookmarks> | null = null;
+    function Consumer() { state = useBookmarks(); return null; }
+    const root = createRoot(env.doc.createElement('div') as any);
+    await act(async () => { root.render(React.createElement(BookmarkProvider, null, React.createElement(Consumer))); });
+    return { env, root, get: () => state! };
+  }
+
+  test('点击收藏立即更新快照，且只锁定该帖子，请求失败则回滚', async () => {
+    const other = mockPost('danbooru-9');
+    const { env, root, get } = await mount([other]);
+    let reject!: () => void;
+    const spy = spyOn(globalThis, 'fetch').mockImplementation((() => new Promise((_, fail) => { reject = () => fail(new Error('boom')); })) as any);
+    try {
+      let task: Promise<void>;
+      await act(async () => { task = get().toggle('danbooru-1', [mockPost('danbooru-1')]); });
+      expect(get().snapshot.posts.map(p => p.id)).toEqual(['danbooru-1', 'danbooru-9']);
+      expect(get().pending.has('danbooru-1')).toBe(true);
+      expect(get().pending.has('danbooru-9')).toBe(false);
+      await act(async () => { reject(); await task; });
+      expect(get().snapshot.posts.map(p => p.id)).toEqual(['danbooru-9']);
+      expect(get().pending.size).toBe(0);
+      await act(async () => { root.unmount(); });
+    } finally { spy.mockRestore(); env.restore(); }
+  });
+
+  test('取消收藏失败时按原位置回滚', async () => {
+    const list = [mockPost('danbooru-1'), mockPost('danbooru-2'), mockPost('danbooru-3')];
+    const { env, root, get } = await mount(list);
+    const spy = spyOn(globalThis, 'fetch').mockImplementation((() => Promise.resolve(new Response('{"success":false}', { status: 500 }))) as any);
+    try {
+      await act(async () => { await get().toggle('danbooru-2', [list[1]]); });
+      expect(get().snapshot.posts.map(p => p.id)).toEqual(['danbooru-1', 'danbooru-2', 'danbooru-3']);
+      await act(async () => { root.unmount(); });
+    } finally { spy.mockRestore(); env.restore(); }
+  });
+});

@@ -84,11 +84,22 @@ function Media({ post, index, count, onView }: { post: Post; index: number; coun
   );
 }
 
-export default function PostCard({ id, posts: seed, trusted = false, onOpen, onComments, onAuthor }: { id: string; posts: Post[]; trusted?: boolean; onOpen?: () => void; onComments: () => void; onAuthor?: (artist: string) => void }) {
+// 标签预览超出可视高度时打上标记，由 CSS 渐隐遮罩提示还有更多。
+function markTagOverflow(element: HTMLDivElement | null) {
+  if (!element) return;
+  const update = () => element.toggleAttribute('data-overflow', element.scrollHeight > element.clientHeight + 1);
+  update();
+  if (typeof ResizeObserver === 'undefined') return;
+  const observer = new ResizeObserver(update);
+  observer.observe(element);
+  return () => observer.disconnect();
+}
+
+export default function PostCard({ id, posts: seed, trusted = false, fresh = false, onOpen, onComments, onAuthor }: { id: string; posts: Post[]; trusted?: boolean; fresh?: boolean; onOpen?: () => void; onComments: () => void; onAuthor?: (artist: string) => void }) {
   const pointer = useRef<{ x: number; y: number } | null>(null);
   const bookmarks = useBookmarks();
   const bookmarked = bookmarks.snapshot.posts.some(post => (post.parentId || post.id) === id || seed.some(member => member.id === post.id));
-  const busy = bookmarks.pendingId === id;
+  const busy = bookmarks.pending.has(id);
   const needsFamily = !trusted && id.startsWith('danbooru-') && seed.some(post => post.parentId || post.hasChildren || !originalMediaURL(post));
   const cacheKey = `family:default:${id}`;
   const [initialCache] = useState(() => trusted ? null : readPostCache(cacheKey));
@@ -98,6 +109,7 @@ export default function PostCard({ id, posts: seed, trusted = false, onOpen, onC
   const [attempt, setAttempt] = useState(0);
   const [viewing, setViewing] = useState<number | null>(null);
   const track = useRef<HTMLDivElement>(null);
+  const [toggled, setToggled] = useState(false);
 
   useEffect(() => {
     if (!needsFamily || (attempt === 0 && initialCache && isFresh(initialCache))) return;
@@ -142,6 +154,7 @@ export default function PostCard({ id, posts: seed, trusted = false, onOpen, onC
     <article
       className="post-card"
       data-post-group={id}
+      data-fresh={fresh || undefined}
       aria-label={`帖子 ${id}`}
       tabIndex={onOpen ? 0 : undefined}
       onKeyDown={event => {
@@ -198,7 +211,7 @@ export default function PostCard({ id, posts: seed, trusted = false, onOpen, onC
           {onOpen && <button className="detail-entry" onClick={onOpen} aria-label="查看详情" title="查看详情"><Icon name="open" /></button>}
         </header>
         {title && <p className="post-body">{title}</p>}
-        <div className="post-tags" data-preview={Boolean(onOpen)} role="region" aria-label="帖子标签" title={onOpen ? '进入详情查看完整标签' : undefined}>
+        <div className="post-tags" data-preview={Boolean(onOpen)} role="region" aria-label="帖子标签" ref={markTagOverflow} title={onOpen ? '进入详情查看完整标签' : undefined}>
           {tags.length ? tags.map(tag => <span className="post-tag" key={tag.name}>{`#${tag.name} `}</span>) : <span>暂无标签</span>}
         </div>
         {needsFamily && status === 'loading' && !related.length && <p className="post-notice" role="status"><span className="spinner" aria-hidden="true" />正在加载关联媒体…</p>}
@@ -229,17 +242,16 @@ export default function PostCard({ id, posts: seed, trusted = false, onOpen, onC
             className="bookmark-button"
             aria-label={bookmarked ? '取消收藏' : '收藏'}
             aria-pressed={bookmarked}
-            aria-busy={busy}
-            title={busy ? '处理中…' : bookmarked ? '取消收藏' : '收藏'}
-            disabled={!bookmarks.ready || bookmarks.pendingId !== null}
-            onClick={() => void bookmarks.toggle(id, posts)}
+            data-toggled={toggled || undefined}
+            title={bookmarked ? '取消收藏' : '收藏'}
+            disabled={!bookmarks.ready || busy}
+            onClick={() => { setToggled(true); void bookmarks.toggle(id, posts); }}
           >
             <Icon name="bookmark" />
-            <span className="visually-hidden">{busy ? '处理中…' : bookmarked ? '已收藏' : '收藏'}</span>
+            <span className="visually-hidden">{bookmarked ? '已收藏' : '收藏'}</span>
           </button>
         </footer>
-        {viewing !== null && <MediaViewer posts={posts} start={viewing} onClose={() => setViewing(null)} />}
-        {bookmarks.action?.id === id && bookmarks.action.error && <p className="post-notice" role="alert">{bookmarks.action.message}</p>}
+        {viewing !== null && <MediaViewer posts={posts} start={viewing} onClose={() => setViewing(null)} getOrigin={index => track.current?.children[index]?.querySelector<HTMLElement>('img') ?? null} />}
       </div>
     </article>
   );

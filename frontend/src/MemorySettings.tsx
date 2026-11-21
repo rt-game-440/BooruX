@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useToast } from './toast';
 import type { FormEvent } from 'react';
 import {
   MEMORY_LIMIT_RANGE, addMemory, clearMemories, deleteMemory, fetchMemories, memoryUsage, saveMemorySettings, updateMemory,
@@ -10,6 +11,7 @@ export default function MemorySettings() {
   const [state, setState] = useState<MemoryState | null>(null);
   const [loadError, setLoadError] = useState('');
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
   const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
   const [draft, setDraft] = useState('');
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
@@ -35,6 +37,7 @@ export default function MemorySettings() {
     try {
       await action();
       setMessage({ text: done });
+      toast.show({ message: done });
       await load();
     } catch (error) {
       setMessage({ text: error instanceof Error ? error.message : '操作失败，请重试', error: true });

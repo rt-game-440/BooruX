@@ -1,27 +1,16 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Link, Outlet, Route, Routes, useLocation, useParams } from 'react-router';
 import PostFeed, { ArtistPage } from './PostFeed';
 import PostDetail from './PostDetail';
 import Settings from './Settings';
-import { BookmarkProvider, useBookmarks } from './Bookmarks';
+import { BookmarkProvider } from './Bookmarks';
+import { ToastProvider } from './toast';
 import { areaForPath, isChatPath, PageSessionProvider, usePageSession } from './page-session';
 import { Icon } from './icons';
 
 // 对话页带 Markdown 渲染依赖，按需加载，不拖慢首页首屏。
 const Chat = lazy(() => import('./Chat'));
 const chat = <Suspense fallback={<div className="chat-loading" role="status"><span className="spinner" aria-hidden="true" />正在加载…</div>}><Chat /></Suspense>;
-
-// 收藏成功的短暂提示，出现在操作附近的视口底部；失败仍在卡片内以 alert 呈现。
-function BookmarkToast() {
-  const { action } = useBookmarks();
-  const [toast, setToast] = useState<{ key: number; message: string } | null>(null);
-  useEffect(() => {
-    if (action && !action.error) setToast(current => ({ key: (current?.key ?? 0) + 1, message: action.message }));
-  }, [action]);
-  return <div className="toast-region" role="status" aria-live="polite">
-    {toast && <p className="toast" key={toast.key}>{toast.message}</p>}
-  </div>;
-}
 
 export function Layout() {
   const { pathname } = useLocation();
@@ -50,7 +39,6 @@ export function Layout() {
         </Link>
       </nav>
       <main id="content" className="content" tabIndex={-1}><Outlet /></main>
-      <BookmarkToast />
     </div>
   );
 }
@@ -78,7 +66,7 @@ function NotFound() {
   </section>;
 }
 export default function App() {
-  return <BrowserRouter><BookmarkProvider><PageSessionProvider>
+  return <BrowserRouter><ToastProvider><BookmarkProvider><PageSessionProvider>
     <Routes><Route element={<Layout />}>
       <Route index element={<FeedRoute kind="home" />} />
       <Route path="posts/:id" element={<DetailRoute />} />
@@ -90,5 +78,5 @@ export default function App() {
       <Route path="settings" element={<Settings />} />
       <Route path="*" element={<NotFound />} />
     </Route></Routes>
-  </PageSessionProvider></BookmarkProvider></BrowserRouter>;
+  </PageSessionProvider></BookmarkProvider></ToastProvider></BrowserRouter>;
 }

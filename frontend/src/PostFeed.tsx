@@ -115,6 +115,8 @@ export function FeedResults({ kind, query, onReset, onAuthor }: { kind: 'home' |
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
   const more = useRef<HTMLButtonElement>(null);
+  // 只给首屏之后追加的卡片淡入，避免整列表闪动。
+  const seen = useRef<Set<string> | null>(null);
 
   useEffect(() => { void refreshBookmarks(); }, [refreshBookmarks]);
 
@@ -158,6 +160,10 @@ export function FeedResults({ kind, query, onReset, onAuthor }: { kind: 'home' |
   const retry = kind === 'home' ? () => setAttempt(value => value + 1) : () => void refreshBookmarks();
   const groups = groupPosts(kind === 'home' ? displayed.posts.filter(post => post.id.startsWith('danbooru-')) : displayed.posts);
   const nextCursor = displayed.nextCursor || '';
+  if (seen.current === null) seen.current = new Set(groups.map(group => group.id));
+  const known = seen.current;
+  const fresh = new Set(groups.filter(group => !known.has(group.id)).map(group => group.id));
+  groups.forEach(group => known.add(group.id));
 
   // 接近列表底部时自动加载下一页；按钮保留为键盘与失败后的手动入口。每次状态变化重建观察器，
   // 以便新页加载后按钮仍在预取范围内时继续加载。
@@ -175,8 +181,9 @@ export function FeedResults({ kind, query, onReset, onAuthor }: { kind: 'home' |
     <div className="feed-results">
       {displayed.source === 'sqlite' && <p className="feed-notice" role="status">当前展示本地缓存。</p>}
       {kind === 'home' && bookmarks.error && <p className="feed-notice" role="alert">收藏状态加载失败。<button className="text-button" onClick={() => void refreshBookmarks()}>重试</button></p>}
-      {groups.map(group => <PostCard key={group.id} id={group.id} posts={group.posts} onOpen={() => open(group.posts.find(post => post.id === group.id)?.id || group.posts[0].id)} onComments={() => open(group.posts.find(post => post.id === group.id)?.id || group.posts[0].id, true)} onAuthor={onAuthor || openArtist} />)}
+      {groups.map(group => <PostCard key={group.id} fresh={fresh.has(group.id)} id={group.id} posts={group.posts} onOpen={() => open(group.posts.find(post => post.id === group.id)?.id || group.posts[0].id)} onComments={() => open(group.posts.find(post => post.id === group.id)?.id || group.posts[0].id, true)} onAuthor={onAuthor || openArtist} />)}
       {displayedLoading && !groups.length && <><SkeletonCard /><SkeletonCard /><SkeletonCard /></>}
+      {displayedLoading && groups.length > 0 && kind === 'home' && cursor && <><SkeletonCard /><SkeletonCard /></>}
       <div className="feed-status" aria-live="polite">
         {displayedLoading && <p role="status" className="visually-hidden">{groups.length ? '正在更新帖子…' : '正在加载帖子…'}</p>}
         {displayedError && (groups.length ? (
@@ -206,9 +213,7 @@ export function FeedResults({ kind, query, onReset, onAuthor }: { kind: 'home' |
             <p className="empty-title">暂无可展示的 Danbooru 帖子。</p>
           </div>
         ))}
-        {!displayedError && nextCursor && <button ref={more} className="button load-more" disabled={displayedLoading} aria-busy={displayedLoading} onClick={() => setCursor(nextCursor)}>
-          {displayedLoading ? <><span className="spinner" aria-hidden="true" />正在加载…</> : '加载更多'}
-        </button>}
+        {!displayedError && nextCursor && <button ref={more} className="button load-more" disabled={displayedLoading} aria-busy={displayedLoading} data-loading={(displayedLoading && groups.length > 0) || undefined} onClick={() => setCursor(nextCursor)}>加载更多</button>}
         {!displayedLoading && !displayedError && groups.length > 0 && !nextCursor && <p className="feed-end">已加载全部帖子</p>}
       </div>
     </div>

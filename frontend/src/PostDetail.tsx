@@ -162,7 +162,10 @@ export default function PostDetail() {
           <div className="comment-status" aria-live="polite">
             {comments.streams.filter(stream => stream.error).map(stream => <p className="inline-alert" role="alert" key={stream.memberId}><Icon name="alert" />{postSource(stream.memberId).label} 的评论暂缺：{stream.error}</p>)}
             {comments.streams.some(stream => stream.error) && <button className="button" disabled={busy} onClick={() => void load(true)}>{commentsNeedReload(comments) ? '重新加载评论' : '重试缺失评论'}</button>}
-            {busy && <p className="comment-loading" role="status"><span className="spinner" aria-hidden="true" />正在加载原站评论…</p>}
+            {busy && <>
+              <p className="visually-hidden" role="status">正在加载原站评论…</p>
+              {[0, 1, 2].slice(comments.displayed.length ? 2 : 0).map(i => <div className="comment-skeleton" aria-hidden="true" key={i}><span className="skeleton-avatar" /><span className="skeleton-lines"><i /><i /></span></div>)}
+            </>}
             {!busy && !comments.displayed.length && commentsComplete(comments) && <p className="comment-empty">暂无评论。</p>}
             {!busy && comments.displayed.length > 0 && detail.familyComplete && commentsComplete(comments) && <p className="feed-end">已加载全部评论</p>}
             {!busy && !commentsComplete(comments) && comments.streams.some(stream => !stream.error && (!stream.exhausted || stream.buffer.length > 0)) && <button className="button load-more" onClick={() => void load()}>加载更多评论</button>}

@@ -29,10 +29,25 @@ export default function ConversationDrawer({ conversations, currentId, onSelect,
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
 
+  const anchor = useRef<HTMLDivElement>(null);
+  const finishing = useRef(false);
+  // 先给面板与背景打上 data-closing 播退出动画，结束后才真正卸载。
   const finish = useCallback(() => {
-    onClose();
-    after.current?.();
-    after.current = null;
+    if (finishing.current) return;
+    finishing.current = true;
+    const done = () => {
+      onClose();
+      after.current?.();
+      after.current = null;
+    };
+    const element = anchor.current;
+    const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!element || reduce) { done(); return; }
+    element.dataset.closing = '';
+    let ended = false;
+    const end = () => { if (!ended) { ended = true; done(); } };
+    element.addEventListener('animationend', event => { if ((event.target as Element).classList.contains('chat-drawer')) end(); });
+    window.setTimeout(end, 320);
   }, [onClose]);
   const close = useHistoryLayer(finish);
 
@@ -68,7 +83,7 @@ export default function ConversationDrawer({ conversations, currentId, onSelect,
     void act(`rename:${id}`, async () => { await onRename(id, title); setEditing(null); });
   };
 
-  return <div className="chat-drawer-anchor">
+  return <div ref={anchor} className="chat-drawer-anchor">
     <div className="chat-drawer-backdrop" aria-hidden="true" onClick={close} />
     <div ref={panel} id="chat-conversations" className="chat-drawer" role="dialog" aria-label="会话列表"
       onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); close(); } }}>

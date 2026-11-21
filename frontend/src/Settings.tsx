@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { RATING_OPTIONS, TAG_FILTER_MAX, THEME_OPTIONS, applyTheme, fetchSettings, normalizeFilterTag, saveSettings } from './rating-settings';
 import type { Rating, TagFilter, Theme } from './rating-settings';
@@ -7,6 +7,7 @@ import { useBookmarks } from './Bookmarks';
 import { clearPostsCache, postsCacheSize } from './post-cache';
 import { clearSearchHistory, readSearchHistory } from './search';
 import { Icon } from './icons';
+import { useToast } from './toast';
 import ContextSettings from './ContextSettings';
 import MemorySettings from './MemorySettings';
 import ProviderSettings from './ProviderSettings';
@@ -34,9 +35,27 @@ function Group({ index, active, children }: { index: number; active: number; chi
   </section>;
 }
 
+// 保存按钮：保存中显示 spinner，成功后短暂显示 ✓「已保存」，有未保存修改时高亮。
+function SaveButton({ saving, saved, dirty, busy }: { saving: boolean; saved: boolean; dirty: boolean; busy: boolean }) {
+  return <button type="submit" className="button primary save-button" data-state={saving ? 'saving' : saved ? 'saved' : dirty ? 'dirty' : 'idle'}
+    disabled={busy || !dirty} aria-busy={saving || undefined}>
+    {saving ? <><span className="spinner" aria-hidden="true" />保存中…</> : saved ? <><Icon name="check" />已保存</> : '保存'}
+  </button>;
+}
+
 export default function Settings() {
   const { invalidate } = usePageSession();
   const { clear: clearBookmarks } = useBookmarks();
+  const toast = useToast();
+  const [flash, setFlash] = useState<Scope | null>(null);
+  const flashTimer = useRef(0);
+  const flashSaved = (target: Scope, message: string) => {
+    window.clearTimeout(flashTimer.current);
+    setFlash(target);
+    flashTimer.current = window.setTimeout(() => setFlash(null), 1800);
+    toast.show({ message });
+  };
+  useEffect(() => () => window.clearTimeout(flashTimer.current), []);
   const [rating, setRating] = useState<Rating>('general');
   const [draft, setDraft] = useState<Rating>('general');
   const [theme, setTheme] = useState<Theme>('system');
@@ -59,6 +78,27 @@ export default function Settings() {
   // 支持 /settings?tab=settings-providers 这类直达链接。
   const [tab, setTab] = useState(() => Math.max(0, GROUPS.findIndex(group => group.id === new URLSearchParams(window.location?.search).get('tab'))));
   const tabsRef = useRef<HTMLDivElement>(null);
+  const indicator = useRef<HTMLSpanElement>(null);
+
+  // 选中标签的滑动指示块：测量选中项位置，通过 transform 移动；窄屏下同步把它滚动到可见范围。
+  useLayoutEffect(() => {
+    const nav = tabsRef.current;
+    const measure = (smooth: boolean) => {
+      const selected = nav?.querySelectorAll?.<HTMLElement>('[role="tab"]')[tab];
+      const bar = indicator.current;
+      if (!nav || !selected || !bar) return;
+      bar.style.width = `${selected.offsetWidth}px`;
+      bar.style.transform = `translateX(${selected.offsetLeft}px)`;
+      bar.dataset.ready = '';
+      const left = selected.offsetLeft - (nav.clientWidth - selected.offsetWidth) / 2;
+      if (nav.scrollWidth > nav.clientWidth) nav.scrollTo({ left: Math.max(0, left), behavior: smooth ? 'smooth' : 'auto' });
+    };
+    measure(true);
+    if (!nav || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => measure(false));
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [tab]);
 
   const selectTab = (next: number, focus = false) => {
     setTab(next);
@@ -129,6 +169,7 @@ export default function Settings() {
       setRating(draft);
       dropLoadedContent();
       setNotice('年龄分级已保存；返回首页或收藏时将按新分级重新加载。');
+      flashSaved('rating', '年龄分级已保存');
     } catch (value) {
       setSaveError(value instanceof Error ? value.message : '年龄分级保存失败，请重试');
       setRetrySave(() => () => void saveRating());
@@ -147,6 +188,7 @@ export default function Settings() {
       savedThemeRef.current = themeDraft;
       applyTheme(themeDraft, true);
       setNotice('背景色已保存。');
+      flashSaved('theme', '背景色已保存');
     } catch (value) {
       applyTheme(previous, false);
       setThemeDraft(previous);
@@ -165,6 +207,7 @@ export default function Settings() {
       setTagFilter(tagsDraft);
       dropLoadedContent();
       setNotice('标签屏蔽已保存；返回首页或收藏时将重新加载。');
+      flashSaved('tags', '标签屏蔽已保存');
     } catch (value) {
       setSaveError(value instanceof Error ? value.message : '标签屏蔽保存失败，请重试');
       setRetrySave(() => () => void saveTags());
@@ -231,6 +274,7 @@ export default function Settings() {
         event.preventDefault();
         selectTab((keys[event.key] + GROUPS.length) % GROUPS.length, true);
       }}>
+      <span ref={indicator} className="settings-nav-indicator" aria-hidden="true" />
       {GROUPS.map((group, index) => <button key={group.id} id={`${group.id}-tab`} type="button" role="tab"
         aria-selected={tab === index} aria-controls={group.id} tabIndex={tab === index ? 0 : -1}
         onClick={() => selectTab(index)}>{group.label}</button>)}
@@ -247,13 +291,14 @@ export default function Settings() {
             <legend className="visually-hidden">选择背景色</legend>
             {THEME_OPTIONS.map(option => <label key={option.value} className="rating-option theme-option">
               <span className="theme-swatch" data-preview={option.value} aria-hidden="true" />
+              <span className="theme-check" aria-hidden="true"><Icon name="check" /></span>
               <input type="radio" name="themeMode" value={option.value} checked={themeDraft === option.value} onChange={() => { setThemeDraft(option.value); applyTheme(option.value, false); resetFeedback('theme'); }} />
               <span><strong>{option.label}</strong><small>{option.description}</small></span>
             </label>)}
           </fieldset>
           {feedback('theme')}
           <div className="setting-actions">
-            <button type="submit" className="button primary" disabled={saving !== '' || themeDraft === theme}>{saving === 'theme' ? '保存中…' : '保存'}</button>
+            <SaveButton saving={saving === 'theme'} saved={flash === 'theme' && themeDraft === theme} dirty={themeDraft !== theme} busy={saving !== ''} />
             {themeDraft !== theme && <button type="button" className="button" disabled={saving !== ''} onClick={cancelTheme}>取消更改</button>}
           </div>
         </form>
@@ -274,7 +319,7 @@ export default function Settings() {
           </fieldset>
           {feedback('rating')}
           <div className="setting-actions">
-            <button type="submit" className="button primary" disabled={saving !== '' || draft === rating}>{saving === 'rating' ? '保存中…' : '保存'}</button>
+            <SaveButton saving={saving === 'rating'} saved={flash === 'rating' && draft === rating} dirty={draft !== rating} busy={saving !== ''} />
             {draft !== rating && <button type="button" className="button" disabled={saving !== ''} onClick={cancelRating}>取消更改</button>}
           </div>
         </form>
@@ -306,7 +351,7 @@ export default function Settings() {
           </fieldset>
           {feedback('tags')}
           <div className="setting-actions">
-            <button type="submit" className="button primary" disabled={saving !== '' || !tagsDirty}>{saving === 'tags' ? '保存中…' : '保存'}</button>
+            <SaveButton saving={saving === 'tags'} saved={flash === 'tags' && !tagsDirty} dirty={tagsDirty} busy={saving !== ''} />
             {tagsDirty && <button type="button" className="button" disabled={saving !== ''} onClick={() => { setTagsDraft(tagFilter); setTagInput(''); resetFeedback('tags'); }}>取消更改</button>}
           </div>
         </form>
