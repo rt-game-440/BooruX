@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useToast } from './toast';
 
 const RANGE = { min: 8000, max: 1000000, fallback: 128000 } as const;
 
@@ -7,6 +8,7 @@ export default function ContextSettings() {
   const [saved, setSaved] = useState<number>(RANGE.fallback);
   const [draft, setDraft] = useState(String(RANGE.fallback));
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
   const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
 
   useEffect(() => {
@@ -29,6 +31,7 @@ export default function ContextSettings() {
       if (!response.ok || data.success === false) throw new Error(data.error || '保存失败，请重试');
       setSaved(value);
       setMessage({ text: '上下文上限已保存，下一次对话生效。' });
+      toast.show({ message: '上下文上限已保存' });
     } catch (error) {
       setMessage({ text: error instanceof Error ? error.message : '保存失败，请重试', error: true });
     } finally {

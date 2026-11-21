@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useToast } from './toast';
 import type { FormEvent } from 'react';
 import {
   PROTOCOL_OPTIONS, addModel, addedModels, candidateModels, createProvider, deleteProvider, fetchMainModel, fetchProviders,
@@ -54,6 +55,7 @@ export default function ProviderSettings() {
   // busy 记录正在进行的操作，形如 "refresh:<id>"，同一时间只允许一个。
   const [busy, setBusy] = useState('');
   const [feedback, setFeedback] = useState<Feedback>(null);
+  const toast = useToast();
   const [editing, setEditing] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
   const [queries, setQueries] = useState<Record<string, string>>({});
@@ -75,7 +77,7 @@ export default function ProviderSettings() {
     setConfirming(null);
     try {
       const text = await action();
-      if (text) setFeedback({ scope, text });
+      if (text) { setFeedback({ scope, text }); toast.show({ message: text }); }
     } catch (error) {
       setFeedback({ scope, text: error instanceof Error ? error.message : '操作失败，请重试', error: true });
     } finally {

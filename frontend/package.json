@@ -8,7 +8,8 @@
     "check": "tsc --noEmit",
     "test": "bun test",
     "build": "bun run check && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "shots": "bun run scripts/ui-shots.ts"
   },
   "dependencies": {
     "react": "^19.2.0",
@@ -22,6 +23,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.0",
+    "playwright": "^1.65.1",
     "typescript": "^6.0.0",
     "vite": "^8.0.0"
   }

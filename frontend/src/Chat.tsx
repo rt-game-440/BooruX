@@ -26,6 +26,15 @@ type ModelOption = ReturnType<typeof mainModelOptions>[number];
 
 const nearBottom = () => window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 160;
 
+// 恢复历史会话 / 首次渲染时不播放消息进入动画：挂载时打标记，两帧之后移除，之后新增的消息才有动画。
+function markRestored(list: HTMLOListElement | null) {
+  if (!list) return;
+  list.dataset.restored = '';
+  let second = 0;
+  const first = requestAnimationFrame(() => { second = requestAnimationFrame(() => delete list.dataset.restored); });
+  return () => { cancelAnimationFrame(first); cancelAnimationFrame(second); };
+}
+
 export default function Chat() {
   const { conversationId } = useParams();
   const navigate = useNavigate();
@@ -313,7 +322,7 @@ export default function Chat() {
             {SUGGESTIONS.map(item => <li key={item}><button type="button" disabled={sending || configured !== true} onClick={() => void send(item)}>{item}</button></li>)}
           </ul>
         </>}
-      </div> : <ol className="chat-messages" aria-live="polite" aria-busy={running}>
+      </div> : <ol className="chat-messages" ref={markRestored} aria-live="polite" aria-busy={running}>
         {state!.runs.map(run => {
           const items = visible.filter(message => message.runId === run.id);
           const failed = run.status === 'failed' || run.status === 'cancelled' || run.status === 'interrupted';
@@ -349,8 +358,9 @@ export default function Chat() {
       onDragOver={(event: DragEvent) => { if (event.dataTransfer.types.includes('Files')) { event.preventDefault(); setDragging(true); } }}
       onDragLeave={() => setDragging(false)}
       onDrop={(event: DragEvent) => { event.preventDefault(); setDragging(false); addFiles(event.dataTransfer.files); }}>
-      {!atBottom && !empty && <button type="button" className="chat-to-bottom" aria-label="回到底部" title="回到底部"
-        onClick={() => { follow.current = true; window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }); }}><Icon name="chevron" /></button>}
+      <button type="button" className="chat-to-bottom" aria-label="回到底部" title="回到底部" data-visible={(!atBottom && !empty) || undefined}
+        aria-hidden={atBottom || empty || undefined} tabIndex={!atBottom && !empty ? 0 : -1}
+        onClick={() => { follow.current = true; window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }); }}><Icon name="chevron" /></button>
       {drafts.length + quotes.length > 0 && <ul className="chat-drafts">
         {quotes.map(item => <li key={item.id} data-state="ready" data-kind="post" title={`引用 ${item.id}`}>
           <img src={item.url} alt={`引用作品 ${item.id}`} />
@@ -391,11 +401,13 @@ export default function Chat() {
           <Icon name="chevron" />
         </label>}
         {usage && <span className="chat-context" data-warn={usage.ratio > 0.85 || undefined} title={`上下文占用 ${Math.round(usage.ratio * 100)}%，超出后较早的对话不再纳入`}>{usage.text}</span>}
-        {running
-          ? <button type="button" className="chat-send stop" aria-label="停止生成" title="停止" onClick={stop}><Icon name="stop" /></button>
-          : <button type="submit" className="chat-send" aria-label="发送" title="发送（Enter）" disabled={!canSend} aria-busy={sending}>
-            {sending ? <span className="spinner" /> : <Icon name="send" />}
-          </button>}
+        {/* 发送与停止共用一个按钮，图标交叉淡化，避免按钮被卸载重建而闪动。 */}
+        <button type={running ? 'button' : 'submit'} className={running ? 'chat-send stop' : 'chat-send'} data-mode={running ? 'stop' : 'send'}
+          aria-label={running ? '停止生成' : '发送'} title={running ? '停止' : '发送（Enter）'}
+          disabled={!running && !canSend} aria-busy={!running && sending} onClick={running ? stop : undefined}>
+          <span className="chat-send-icon" data-icon="send">{sending && !running ? <span className="spinner" /> : <Icon name="send" />}</span>
+          <span className="chat-send-icon" data-icon="stop"><Icon name="stop" /></span>
+        </button>
       </div>
     </form>
 

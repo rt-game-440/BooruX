@@ -136,3 +136,25 @@ export function useMediaSwipe(ref: RefObject<HTMLElement | null>, count: number)
     };
   }, [ref, count]);
 }
+
+// ---------- 看图器下滑关闭 ----------
+// 与横滑一样在手势起步时锁定方向；看图器里横向交给原生轨道滚动，因此只需区分纵向与其它。
+export function dismissAxis(dx: number, dy: number): 'x' | 'y' | null {
+  if (Math.hypot(dx, dy) < AXIS_SLOP) return null;
+  return Math.abs(dy) > Math.abs(dx) ? 'y' : 'x';
+}
+
+const DISMISS_DISTANCE_RATIO = 0.22;
+const DISMISS_VELOCITY = 0.5;
+
+// 位移超过视口高度的一定比例，或松手速度足够且方向与位移一致，则关闭。
+export function shouldDismiss(dy: number, velocity: number, height: number): boolean {
+  if (Math.abs(dy) > height * DISMISS_DISTANCE_RATIO) return true;
+  return Math.abs(velocity) > DISMISS_VELOCITY && Math.sign(velocity) === Math.sign(dy) && Math.abs(dy) > 8;
+}
+
+// 拖动进度 0..1：位移达到半个视口高度时背景完全透明。
+export function dismissProgress(dy: number, height: number): number {
+  if (height <= 0) return 0;
+  return Math.min(1, Math.abs(dy) / (height * 0.5));
+}

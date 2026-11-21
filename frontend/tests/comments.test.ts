@@ -198,9 +198,9 @@ describe('评论区样式与触控规范静态断言', () => {
     expect(css).toMatch(/\.comment-body\s*\{[^}]*margin:\s*0;/);
   });
 
-  test('媒体失败态 fade-enter 180ms 淡入与 44px 触控工效', () => {
+  test('媒体失败态 fade-enter 令牌时长淡入与 44px 触控工效', () => {
     expect(css).toContain('@keyframes fade-enter');
-    expect(css).toMatch(/\.media-message\s*\{[^}]*animation:[^}]*fade-enter\s+180ms/);
+    expect(css).toMatch(/\.media-message\s*\{[^}]*animation:[^}]*fade-enter\s+var\(--dur-2\)/);
     expect(css).toMatch(/\.media-message\s+a\s*\{[^}]*min-height:\s*44px;/);
   });
 

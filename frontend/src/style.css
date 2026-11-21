@@ -13,7 +13,7 @@
   --meta-link: #444;
   --tag-text: #374151;
   --action-text: #4b5563;
-  --disabled: #6b7280;
+  --disabled: #626977;
   --border: #e5e7eb;
   --control-border: #94a3b8;
   --subtle: #f3f4f6;
@@ -31,6 +31,11 @@
   --skeleton: #eef0f2;
   --skeleton-shine: #f8f9fa;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 280ms;
 }
 
 :root[data-theme="dark"] {
@@ -47,7 +52,7 @@
   --meta-link: #d4d4d8;
   --tag-text: #d4d4d8;
   --action-text: #c4c4cc;
-  --disabled: #8b8b94;
+  --disabled: #9a9aa3;
   --border: #2c2d33;
   --control-border: #6b6e7b;
   --subtle: #25262b;
@@ -81,7 +86,7 @@
     --meta-link: #d4d4d8;
     --tag-text: #d4d4d8;
     --action-text: #c4c4cc;
-    --disabled: #8b8b94;
+    --disabled: #9a9aa3;
     --border: #2c2d33;
     --control-border: #6b6e7b;
     --subtle: #25262b;
@@ -152,6 +157,20 @@ a {
 }
 
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+@keyframes nav-pill {
+  from {
+    background-color: transparent;
+    transform: scale(0.78, 0.9);
+  }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
 
 @keyframes fade-enter {
   from {
@@ -293,7 +312,7 @@ a {
   font-weight: 600;
   text-decoration: none;
   transform: translateY(-100%);
-  transition: transform 150ms ease;
+  transition: transform var(--dur-1) var(--ease-out);
 }
 
 .skip-link:focus,
@@ -399,7 +418,7 @@ a {
 
 @media (prefers-reduced-motion: no-preference) {
   .content > section {
-    animation: fade-enter 200ms ease-out;
+    animation: page-enter var(--dur-2) var(--ease-out);
   }
 }
 
@@ -463,7 +482,7 @@ a {
   height: 18px;
   color: var(--muted);
   pointer-events: none;
-  transition: color 150ms ease;
+  transition: color var(--dur-1) var(--ease-out);
 }
 
 .search-controls input {
@@ -476,7 +495,7 @@ a {
   background: var(--subtle);
   color: var(--text);
   font: inherit;
-  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  transition: background-color var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), box-shadow var(--dur-1) var(--ease-out);
 }
 
 .search-controls input::placeholder {
@@ -515,14 +534,14 @@ a {
   opacity: 0;
   visibility: hidden;
   transform: translateY(-4px);
-  transition: opacity 150ms ease, transform 150ms ease, visibility 0s linear 150ms;
+  transition: opacity var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out), visibility 0s linear var(--dur-1);
 }
 
 .search-header form:focus-within .search-panel {
   opacity: 1;
   visibility: visible;
   transform: none;
-  transition: opacity 150ms ease, transform 150ms ease;
+  transition: opacity var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -631,7 +650,7 @@ a {
   border: 1px solid var(--border);
   font-size: 13px;
   cursor: pointer;
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  transition: background-color var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
 }
 .search-history li button::after {
   content: "";
@@ -689,14 +708,43 @@ html:has(.media-viewer[open]) {
   background: transparent;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .media-viewer[open] {
-    animation: viewer-in 180ms var(--ease-out);
-  }
+/* 打开与收回动效由 MediaViewer 用 Web Animations API 驱动（FLIP）。 */
+.media-viewer[data-closing] {
+  pointer-events: none;
 }
 
-@keyframes viewer-in {
-  from { opacity: 0; }
+/* 放大查看时淡出工具栏与翻页按钮；悬停或键盘聚焦工具栏时恢复。 */
+.viewer-toolbar,
+.viewer-nav {
+  transition: opacity var(--dur-2) var(--ease-out), background-color var(--dur-1) var(--ease-out), transform var(--dur-2) var(--ease-out);
+}
+
+.media-viewer[data-zoomed] .viewer-toolbar {
+  opacity: 0;
+}
+
+.media-viewer[data-zoomed] .viewer-toolbar:hover,
+.media-viewer[data-zoomed] .viewer-toolbar:focus-within {
+  opacity: 1;
+}
+
+.media-viewer[data-zoomed] .viewer-nav {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes count-in {
+  from { opacity: 0; transform: translateY(4px); }
+}
+
+.viewer-count-num {
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .viewer-count-num {
+    animation: count-in var(--dur-2) var(--ease-out);
+  }
 }
 
 .viewer-toolbar {
@@ -740,7 +788,7 @@ html:has(.media-viewer[open]) {
   background: transparent;
   color: #fff;
   cursor: pointer;
-  transition: background-color 150ms ease;
+  transition: background-color var(--dur-1) var(--ease-out);
 }
 
 .viewer-track {
@@ -774,6 +822,8 @@ html:has(.media-viewer[open]) {
   overflow: hidden;
   scroll-snap-align: center;
   scroll-snap-stop: always;
+  /* 横向留给原生轨道滚动，纵向交给 pointer 事件实现下滑关闭（避免收到 pointercancel）。 */
+  touch-action: pan-x;
 }
 
 .viewer-slide img,
@@ -790,6 +840,7 @@ html:has(.media-viewer[open]) {
 }
 
 .viewer-slide[data-zoomed] {
+  touch-action: auto;
   overflow: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
@@ -827,7 +878,7 @@ html:has(.media-viewer[open]) {
   background: rgba(255, 255, 255, 0.14);
   color: #fff;
   cursor: pointer;
-  transition: background-color 150ms ease, transform 180ms var(--ease-out);
+  transition: opacity var(--dur-2) var(--ease-out), background-color var(--dur-1) var(--ease-out), transform var(--dur-2) var(--ease-out);
 }
 
 .viewer-nav.prev { left: 16px; }
@@ -922,7 +973,7 @@ html:has(.media-viewer[open]) {
   background: var(--surface);
   content-visibility: auto;
   contain-intrinsic-size: auto 500px;
-  transition: background-color 150ms ease;
+  transition: background-color var(--dur-1) var(--ease-out);
 }
 
 .post-card[tabindex] {
@@ -956,7 +1007,7 @@ html:has(.media-viewer[open]) {
 /* 作者头像与作者名链接到作者页。 */
 a.post-avatar {
   text-decoration: none;
-  transition: background-color 150ms ease, color 150ms ease;
+  transition: background-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
 }
 
 /* 悬停下划线沿用 .post-meta a:hover，这里只恢复作者名的正文色。 */
@@ -1055,11 +1106,14 @@ a.post-avatar {
 }
 
 .post-tags[data-preview="true"] {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
   max-height: 96px;
   overflow: clip;
+}
+
+/* 超出 4 行时用渐隐遮罩代替「…」硬截断（data-overflow 由组件测量后设置）。 */
+.post-tags[data-preview="true"][data-overflow] {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 30px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 30px), transparent);
 }
 
 .post-tag {
@@ -1151,7 +1205,7 @@ a.post-avatar {
 .post-media img {
   -webkit-user-drag: none;
   opacity: 0;
-  transition: opacity 280ms ease;
+  transition: opacity var(--dur-3) var(--ease-out);
 }
 
 .post-media[data-state="ready"] img {
@@ -1190,7 +1244,7 @@ a.post-avatar {
   box-shadow: var(--overlay-shadow);
   opacity: 0;
   cursor: pointer;
-  transition: opacity 150ms ease, transform 180ms var(--ease-out);
+  transition: opacity var(--dur-1) var(--ease-out), transform var(--dur-2) var(--ease-out);
 }
 
 .media-nav.prev { left: 10px; }
@@ -1217,7 +1271,7 @@ a.post-avatar {
   text-align: center;
   font-size: 14px;
   color: var(--muted);
-  animation: fade-enter 180ms ease;
+  animation: fade-enter var(--dur-2) var(--ease-out);
 }
 
 .media-message p {
@@ -1280,8 +1334,25 @@ a.post-avatar {
   color: var(--saved-text);
 }
 
+.bookmark-button svg {
+  fill: transparent;
+  transition: fill var(--dur-2) var(--ease-out);
+}
+
 .bookmark-button[aria-pressed="true"] svg {
   fill: currentColor;
+}
+
+@keyframes bookmark-unpop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.82);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 @keyframes bookmark-pop {
@@ -1377,7 +1448,13 @@ a.post-avatar {
   }
 }
 
-/* 按压反馈：按下 70ms 迅速下沉，松开 180ms 平滑回弹。 */
+@media (prefers-reduced-motion: no-preference) {
+  .post-card[data-fresh] {
+    animation: page-enter var(--dur-3) var(--ease-out);
+  }
+}
+
+/* 按压反馈：按下 70ms 迅速下沉，松开 200ms 平滑回弹。 */
 @media (prefers-reduced-motion: no-preference) {
   .post-actions button:not(:disabled),
   .detail-entry:not(:disabled),
@@ -1385,7 +1462,7 @@ a.post-avatar {
   .icon-button,
   .navigation a,
   .media-nav {
-    transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1), background-color 150ms ease, color 150ms ease, opacity 150ms ease;
+    transition: transform var(--dur-2) var(--ease-out), background-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out), opacity var(--dur-1) var(--ease-out);
   }
 
   .post-actions button:not(:disabled):not(:focus-visible):active,
@@ -1399,11 +1476,19 @@ a.post-avatar {
   }
 
   .navigation a .icon {
-    transition: background-color 200ms ease;
+    transition: background-color var(--dur-2) var(--ease-out);
+  }
+
+  .navigation a.active .icon {
+    animation: nav-pill var(--dur-3) var(--ease-out);
   }
 
   .post-actions .bookmark-button[aria-pressed="true"] svg {
-    animation: bookmark-pop 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: bookmark-pop 260ms var(--ease-spring);
+  }
+
+  .post-actions .bookmark-button[aria-pressed="false"][data-toggled] svg {
+    animation: bookmark-unpop var(--dur-2) var(--ease-out);
   }
 
   .post-media[data-state="loading"],
@@ -1474,6 +1559,12 @@ a.post-avatar {
 
 .load-more {
   min-width: 160px;
+}
+
+/* 加载下一页时骨架卡片已在列表里占位，按钮退到一旁但保留在原位以维持焦点。 */
+.load-more[data-loading] {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .feed-end {
@@ -1607,17 +1698,21 @@ a.post-avatar {
   border-radius: 14px;
 }
 
-/* 轻提示：从底部浮起，停留约两秒后自行淡出。 */
+/* 统一轻提示：同一时间一条；有操作按钮时恢复指针事件并停留更久（时长由 --toast-ms 传入）。 */
 .toast-region {
   position: fixed;
-  z-index: 30;
+  z-index: 60;
   left: 50%;
   bottom: calc(var(--navigation-height) + env(safe-area-inset-bottom, 0px) + 16px);
   transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
   pointer-events: none;
 }
 
 .toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
   padding: 10px 20px;
   border-radius: 999px;
@@ -1627,25 +1722,67 @@ a.post-avatar {
   font-weight: 600;
   white-space: nowrap;
   box-shadow: var(--overlay-shadow);
-  animation: toast-fade 2400ms ease forwards;
+  animation: toast-fade var(--toast-ms, 2400ms) linear forwards;
+}
+
+.toast .icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+.toast[data-tone="success"] .icon {
+  color: #22a55b;
+}
+
+.toast[data-tone="error"] .icon {
+  color: #e0463f;
+}
+
+.toast[data-actionable] {
+  padding-right: 8px;
+  pointer-events: auto;
+}
+
+.toast-action {
+  min-height: 32px;
+  margin-left: 4px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: background-color var(--dur-1) var(--ease-out);
+}
+
+.toast-action:hover {
+  background: rgba(127, 127, 127, 0.25);
+}
+
+.toast-action:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
 }
 
 @keyframes toast-fade {
-  0% { opacity: 0; }
-  8%, 85% { opacity: 1; }
+  0%, 90% { opacity: 1; }
   100% { opacity: 0; visibility: hidden; }
 }
 
 @keyframes toast-rise {
-  0% { opacity: 0; transform: translateY(12px) scale(0.96); }
-  8%, 85% { opacity: 1; transform: none; }
+  0% { opacity: 0; transform: translateY(12px) scale(0.96); animation-timing-function: var(--ease-out); }
+  6%, 90% { opacity: 1; transform: none; }
   100% { opacity: 0; transform: translateY(4px); visibility: hidden; }
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .toast {
     animation-name: toast-rise;
-    animation-timing-function: var(--ease-out);
   }
 }
 
@@ -1705,6 +1842,24 @@ a.post-avatar {
   font-weight: 700;
   text-transform: uppercase;
 }
+/* 评论加载骨架行：沿用信息流骨架的微光。 */
+.comment-skeleton {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+.comment-skeleton .skeleton-avatar { width: 28px; height: 28px; }
+.comment-skeleton .skeleton-lines { padding-top: 4px; gap: 8px; }
+.comment-skeleton .skeleton-lines i:nth-child(1) { width: 30%; }
+.comment-skeleton .skeleton-lines i:nth-child(2) { width: 76%; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .comment {
+    animation: fade-enter var(--dur-3) var(--ease-out);
+  }
+}
 .comment strong { font-size: 14px; color: var(--text); }
 .comment time, .comment header a { font-size: 12px; color: var(--muted); }
 .comment header a { margin-left: auto; overflow-wrap: anywhere; text-decoration: none; }
@@ -1752,6 +1907,7 @@ a.post-avatar {
 /* ---------- 设置分组 ---------- */
 
 .settings-nav {
+  position: relative;
   display: flex;
   gap: 8px;
   padding: 12px 16px 0;
@@ -1759,7 +1915,24 @@ a.post-avatar {
   scrollbar-width: none;
 }
 
+/* 选中背景是一个滑动指示块，位置由 Settings 测量后通过 transform 设置。 */
+.settings-nav-indicator {
+  position: absolute;
+  top: 12px;
+  left: 0;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--primary-bg);
+  pointer-events: none;
+}
+
+.settings-nav-indicator[data-ready] {
+  transition: transform var(--dur-3) var(--ease-out), width var(--dur-3) var(--ease-out);
+}
+
 .settings-nav [role="tab"] {
+  position: relative;
+  z-index: 1;
   flex: none;
   min-height: 36px;
   padding: 0 16px;
@@ -1770,12 +1943,12 @@ a.post-avatar {
   font: inherit;
   font-size: 14px;
   cursor: pointer;
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  transition: background-color var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
 }
 
 .settings-nav [role="tab"][aria-selected="true"] {
-  border-color: var(--primary-bg);
-  background: var(--primary-bg);
+  border-color: transparent;
+  background: transparent;
   color: var(--primary-text);
   font-weight: 600;
 }
@@ -1787,7 +1960,7 @@ a.post-avatar {
 
 @media (prefers-reduced-motion: no-preference) {
   .setting-group {
-    animation: fade-enter 160ms ease-out;
+    animation: fade-enter var(--dur-1) var(--ease-out);
   }
 }
 
@@ -1844,7 +2017,7 @@ a.post-avatar {
   background: var(--control-border);
   appearance: none;
   cursor: pointer;
-  transition: background-color 180ms ease;
+  transition: background-color var(--dur-2) var(--ease-out);
 }
 
 .switch::after {
@@ -1857,14 +2030,14 @@ a.post-avatar {
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-  transition: transform 180ms var(--ease-out);
+  transition: transform var(--dur-2) var(--ease-out);
 }
 
 .switch:checked { background: var(--accent); }
 .switch:checked::after { transform: translateX(18px); }
 .switch:disabled { cursor: progress; opacity: 0.6; }
 
-.filter-editor { transition: opacity 150ms ease; }
+.filter-editor { transition: opacity var(--dur-1) var(--ease-out); }
 .filter-editor[data-enabled="false"] { opacity: 0.6; }
 
 .filter-input {
@@ -2092,7 +2265,7 @@ a.post-avatar {
 }
 .setting-item p { margin: 0; font-size: 13px; line-height: 1.6; color: var(--muted-strong); }
 .setting-item fieldset { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
-.rating-option { display: flex; gap: 12px; align-items: flex-start; min-height: 52px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
+.rating-option { display: flex; gap: 12px; align-items: flex-start; min-height: 52px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; transition: border-color var(--dur-1) var(--ease-out), background-color var(--dur-1) var(--ease-out); }
 .rating-option:has(input:checked) { border-color: var(--text); background: var(--selected-bg); }
 .rating-option:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 .rating-option:has(input:disabled) { cursor: progress; }
@@ -2107,7 +2280,26 @@ a.post-avatar {
 
 /* 背景色以三张缩略预览呈现；预览颜色固定，不随当前主题变化。 */
 .theme-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.theme-option { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 10px; }
+.theme-option { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 10px; }
+.theme-check {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary-bg);
+  color: var(--primary-text);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-spring);
+}
+.theme-check .icon { width: 12px; height: 12px; stroke-width: 3; }
+.theme-option:has(input:checked) .theme-check { opacity: 1; transform: none; }
+.theme-option:has(input:checked) { box-shadow: 0 0 0 1px var(--text); }
 .theme-swatch {
   position: relative;
   grid-column: 1 / -1;
@@ -2143,6 +2335,23 @@ a.post-avatar {
 .theme-swatch[data-preview="system"]::before { background: linear-gradient(90deg, #fff 50%, #18191d 50%); }
 
 .setting-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* 保存按钮状态：有修改时带强调光圈；保存中 spinner；成功后短暂变绿显示 ✓。 */
+.save-button {
+  gap: 6px;
+  transition: background-color var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out), opacity var(--dur-1) var(--ease-out);
+}
+.save-button[data-state="dirty"] { box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); }
+.save-button[data-state="saved"]:disabled {
+  opacity: 1;
+  background: var(--success);
+  color: var(--canvas);
+}
+.save-button .spinner { width: 14px; height: 14px; }
+.save-button .icon { width: 16px; height: 16px; stroke-width: 2.4; }
+@media (prefers-reduced-motion: no-preference) {
+  .save-button[data-state="saved"] .icon { animation: bookmark-pop 260ms var(--ease-spring); }
+}
 .setting-error, .setting-notice {
   margin: 16px 16px 0;
   padding: 10px 14px;
@@ -2360,7 +2569,7 @@ a.post-avatar {
   background: var(--surface);
   font-size: 14px;
   cursor: pointer;
-  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms var(--ease-out);
+  transition: background-color var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out);
 }
 
 .chat-suggestions button:active:not(:disabled) { transform: scale(0.97); }
@@ -2414,9 +2623,9 @@ a.post-avatar {
 .chat-message.assistant { display: grid; gap: 10px; }
 
 /* 消息操作条：触屏常显；精确指针设备上悬停消息才显示（最后一轮常显）。 */
-.chat-actions { display: flex; align-items: center; gap: 2px; margin: -2px 0 0 -6px; transition: opacity 150ms ease; }
+.chat-actions { display: flex; align-items: center; gap: 2px; margin: -2px 0 0 -6px; transition: opacity var(--dur-1) var(--ease-out); }
 .chat-message.user .chat-actions { margin: -2px -6px 0 0; justify-self: end; }
-.chat-actions .icon-button { width: 30px; height: 30px; margin: 0; color: var(--muted); transition: color 150ms ease, background-color 150ms ease; }
+.chat-actions .icon-button { width: 30px; height: 30px; margin: 0; color: var(--muted); transition: color var(--dur-1) var(--ease-out), background-color var(--dur-1) var(--ease-out); }
 .chat-actions .icon-button:disabled { opacity: 0.4; cursor: default; }
 .chat-actions .icon { width: 16px; height: 16px; }
 
@@ -2480,7 +2689,7 @@ a.post-avatar {
   background: var(--surface);
   color: var(--muted);
   cursor: pointer;
-  transition: opacity 150ms ease, color 150ms ease;
+  transition: opacity var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
 }
 
 .chat-code-copy .icon { width: 16px; height: 16px; }
@@ -2520,7 +2729,7 @@ a.post-avatar {
 
 .chat-reasoning summary::-webkit-details-marker { display: none; }
 .chat-reasoning summary .icon { width: 16px; height: 16px; }
-.chat-reasoning summary .icon:last-child { transition: transform 200ms var(--ease-out); }
+.chat-reasoning summary .icon:last-child { transition: transform var(--dur-2) var(--ease-out); }
 .chat-reasoning[open] summary .icon:last-child { transform: rotate(180deg); }
 
 .chat-reasoning[data-active] summary span {
@@ -2549,7 +2758,7 @@ a.post-avatar {
   border-radius: 14px;
   background: var(--surface);
   overflow: hidden;
-  transition: border-color 200ms ease;
+  transition: border-color var(--dur-2) var(--ease-out);
 }
 
 .chat-tool[data-status="running"] { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
@@ -2565,10 +2774,10 @@ a.post-avatar {
   font-size: 14px;
   text-align: left;
   cursor: pointer;
-  transition: background-color 150ms ease;
+  transition: background-color var(--dur-1) var(--ease-out);
 }
 
-.chat-tool-head > .icon { color: var(--muted); transition: transform 200ms var(--ease-out); }
+.chat-tool-head > .icon { color: var(--muted); transition: transform var(--dur-2) var(--ease-out); }
 .chat-tool-head[aria-expanded="true"] > .icon { transform: rotate(180deg); }
 .chat-tool-title { flex: 1; min-width: 0; font-weight: 600; }
 
@@ -2580,7 +2789,7 @@ a.post-avatar {
   height: 24px;
   border-radius: 50%;
   background: var(--subtle);
-  transition: background-color 200ms ease, color 200ms ease;
+  transition: background-color var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out);
 }
 
 .chat-tool-status .icon { width: 14px; height: 14px; stroke-width: 2.4; }
@@ -2629,7 +2838,7 @@ a.post-avatar {
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  transition: opacity 250ms ease, transform 300ms var(--ease-out);
+  transition: opacity var(--dur-2) var(--ease-out), transform var(--dur-3) var(--ease-out);
 }
 
 .chat-post img[data-ready] { opacity: 1; }
@@ -2660,7 +2869,7 @@ a.post-avatar {
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
   cursor: pointer;
-  transition: opacity 150ms ease;
+  transition: opacity var(--dur-1) var(--ease-out);
 }
 
 .chat-post-detail .icon,
@@ -2735,7 +2944,7 @@ a.post-avatar {
   border-radius: 22px;
   background: var(--surface);
   box-shadow: var(--overlay-shadow);
-  transition: border-color 150ms ease, background-color 150ms ease;
+  transition: border-color var(--dur-1) var(--ease-out), background-color var(--dur-1) var(--ease-out);
 }
 
 .chat-composer:focus-within { border-color: var(--control-border); }
@@ -2795,14 +3004,29 @@ a.post-avatar {
   background: var(--primary-bg);
   color: var(--primary-text);
   cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease, transform 150ms var(--ease-out);
+  transition: background-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out);
 }
 
+.chat-send { position: relative; }
 .chat-send:active:not(:disabled) { transform: scale(0.92); }
 .chat-send:disabled { background: var(--subtle); color: var(--disabled); cursor: default; }
 .chat-send .icon { width: 18px; height: 18px; stroke-width: 2.2; }
-.chat-send.stop .icon { fill: currentColor; }
+.chat-send-icon[data-icon="stop"] .icon { fill: currentColor; }
 .chat-send .spinner { width: 14px; height: 14px; }
+
+/* 发送 ↔ 停止：两个图标叠放，按 data-mode 交叉淡化并带轻微缩放/旋转。 */
+.chat-send-icon {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transition: opacity var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-out);
+}
+.chat-send[data-mode="send"] .chat-send-icon[data-icon="stop"],
+.chat-send[data-mode="stop"] .chat-send-icon[data-icon="send"] {
+  opacity: 0;
+  transform: scale(0.5) rotate(-45deg);
+}
 
 .chat-drafts { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 2px 2px 8px; list-style: none; }
 .chat-drafts li {
@@ -2816,7 +3040,7 @@ a.post-avatar {
   background: var(--media-bg);
 }
 
-.chat-drafts img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity 200ms ease; }
+.chat-drafts img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity var(--dur-2) var(--ease-out); }
 .chat-drafts li[data-state="uploading"] img { opacity: 0.45; }
 .chat-drafts li[data-state="error"] { outline: 2px solid var(--error); outline-offset: -2px; }
 .chat-drafts .spinner { position: relative; color: #fff; }
@@ -2854,7 +3078,19 @@ a.post-avatar {
   background: var(--surface);
   box-shadow: var(--overlay-shadow);
   cursor: pointer;
-  transform: translateX(-50%);
+  transform: translate(-50%, 8px) scale(0.9);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-out), visibility 0s linear var(--dur-2);
+}
+
+.chat-to-bottom[data-visible] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate(-50%, 0) scale(1);
+  transition-delay: 0s;
 }
 
 /* 会话列表：页头下方展开的下拉抽屉，宽度与内容列一致，不占用左侧留白。 */
@@ -2871,11 +3107,11 @@ a.post-avatar {
   background: none;
   font: inherit;
   cursor: pointer;
-  transition: background-color 150ms ease;
+  transition: background-color var(--dur-1) var(--ease-out);
 }
 
 .chat-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chat-title .icon { width: 18px; height: 18px; color: var(--muted); transition: transform 200ms var(--ease-out); }
+.chat-title .icon { width: 18px; height: 18px; color: var(--muted); transition: transform var(--dur-2) var(--ease-out); }
 .chat-title[aria-expanded="true"] .icon { transform: rotate(180deg); }
 .chat-title[aria-expanded="true"] { background: var(--subtle); }
 
@@ -2919,7 +3155,7 @@ a.post-avatar {
   background: var(--subtle);
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 150ms ease;
+  transition: background-color var(--dur-1) var(--ease-out);
 }
 
 .chat-drawer > .setting-error { margin: 0 12px 8px; }
@@ -2929,7 +3165,7 @@ a.post-avatar {
   display: flex;
   align-items: center;
   border-radius: 12px;
-  transition: background-color 150ms ease;
+  transition: background-color var(--dur-1) var(--ease-out);
 }
 
 .chat-drawer-list li[data-current] { background: var(--selected-bg); }
@@ -2948,7 +3184,7 @@ a.post-avatar {
 
 .chat-drawer-title { overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .chat-drawer-meta { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
-.chat-drawer-actions { display: flex; flex: none; align-items: center; padding-right: 4px; transition: opacity 150ms ease; }
+.chat-drawer-actions { display: flex; flex: none; align-items: center; padding-right: 4px; transition: opacity var(--dur-1) var(--ease-out); }
 .chat-drawer-actions .icon-button { width: 32px; height: 32px; margin: 0; color: var(--muted); }
 .chat-drawer-actions .icon { width: 17px; height: 17px; }
 .chat-drawer-actions .text-button { margin: 0; font-size: 13px; }
@@ -2981,12 +3217,17 @@ a.post-avatar {
 
 @media (prefers-reduced-motion: no-preference) {
   .chat-message,
-  .chat-run-error { animation: chat-in 240ms var(--ease-out); }
-  .chat-drawer { animation: drawer-in 220ms var(--ease-out); transform-origin: top; }
-  .chat-reasoning[open] p { animation: chat-in 200ms var(--ease-out); }
+  .chat-run-error { animation: chat-in var(--dur-2) var(--ease-out); }
+  .chat-messages[data-restored] .chat-message,
+  .chat-messages[data-restored] .chat-run-error { animation: none; }
+  .chat-drawer { animation: drawer-in var(--dur-2) var(--ease-out); transform-origin: top; }
+  .chat-drawer-anchor[data-closing] .chat-drawer { animation: drawer-out var(--dur-2) var(--ease-in-out) forwards; }
+  .chat-reasoning[open] p { animation: chat-in var(--dur-2) var(--ease-out); }
 }
 
 @keyframes chat-in { from { opacity: 0; transform: translateY(4px); } }
+.chat-drawer-anchor[data-closing] { pointer-events: none; }
+@keyframes drawer-out { to { opacity: 0; transform: translateY(-8px) scaleY(0.97); } }
 @keyframes drawer-in { from { opacity: 0; transform: translateY(-8px) scaleY(0.97); } }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3058,3 +3299,17 @@ a.post-avatar {
 
 .chat-context { margin-left: auto; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .chat-context[data-warn] { color: var(--danger, #f4212e); }
+
+/* ---------- 减弱动态：位移/缩放类过渡降级为短促淡入淡出 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .settings-nav-indicator[data-ready] { transition: none; }
+  .theme-check,
+  .chat-send-icon,
+  .chat-to-bottom,
+  .chat-to-bottom[data-visible] { transition-property: opacity, visibility; transition-duration: var(--dur-1); }
+  .theme-check { transform: none; }
+  .chat-send[data-mode="send"] .chat-send-icon[data-icon="stop"],
+  .chat-send[data-mode="stop"] .chat-send-icon[data-icon="send"] { transform: none; }
+  .chat-to-bottom,
+  .chat-to-bottom[data-visible] { transform: translateX(-50%); }
+}
